@@ -1,5 +1,5 @@
 import path from "node:path";
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { mockAuthenticatedSession } from "../helpers/webAuth";
 
 // Committed under tests/fixtures (not a developer-local path) so the suite
@@ -11,7 +11,18 @@ const SAMPLE_PHOTO_PATH = path.join(__dirname, "../fixtures/sample-meal.jpg");
 // before the AI Photo Analysis section under test ever renders.
 test.beforeEach(async ({ page }) => {
   await mockAuthenticatedSession(page);
+  // MealsPage also loads the meal list (GET /api/me/meals) on mount. This
+  // suite starts no API server, so without a mock that request fails and the
+  // page shows an unrelated "Unable to load meals" alert. Mock only the
+  // exact page prerequisite with a valid empty list; the AI endpoint mocks
+  // stay scenario-specific in each test.
+  await page.route("**/api/me/meals", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
 });
+
+// The alerts under test belong to the AI Photo Analysis section only.
+const aiAlert = (page: Page) => page.locator("section.ai-photo-analysis").getByRole("alert");
 
 test.describe("AI Photo Analysis error handling", () => {
   test("shows a specific message when the backend reports no food detected", async ({ page }) => {
@@ -34,7 +45,7 @@ test.describe("AI Photo Analysis error handling", () => {
     await page.getByLabel("Meal photo").setInputFiles(SAMPLE_PHOTO_PATH);
     await page.getByRole("button", { name: "Analyze photo" }).click();
 
-    const alert = page.getByRole("alert");
+    const alert = aiAlert(page);
     await expect(alert).toBeVisible();
     await expect(alert).toHaveText("No food detected in the selected image. Please choose a photo containing food.");
 
@@ -94,7 +105,7 @@ test.describe("AI Photo Analysis reliability UX (Milestone 13C)", () => {
       await page.getByLabel("Meal photo").setInputFiles(SAMPLE_PHOTO_PATH);
       await page.getByRole("button", { name: "Analyze photo" }).click();
 
-      const alert = page.getByRole("alert");
+      const alert = aiAlert(page);
       await expect(alert).toBeVisible();
       await expect(alert).toHaveText(scenario.expectedMessage);
 
