@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Healthy Eating AI",
+    "slug": "healthy-eating-ai-mobile",
+    "version": "0.1.0",
+    "scheme": "healthyeatingai",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Healthy Eating AI to access your photos so you can analyze a meal photo.",
+          "cameraPermission": "Allow Healthy Eating AI to use the camera so you can photograph a meal for analysis.",
+          "microphonePermission": false
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,202 @@
+.plan-page__date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 220px;
+  margin-top: 1rem;
+}
+
+.plan-page__date-field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.plan-page__date-field input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.plan-page__date-field input:focus {
+  outline: 2px solid #1a7a34;
+  outline-offset: 1px;
+}
+
+.plan-page__message {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.plan-page__message--error {
+  color: #b3261e;
+}
+
+.plan-page__action {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #1a7a34;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.plan-page__week-range {
+  margin-top: 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.plan-page__section-heading {
+  margin: 1.5rem 0 0.5rem;
+}
+
+.plan-page__target p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.plan-page__notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f7f7f5;
+  color: #555;
+  font-size: 0.9rem;
+  max-width: 640px;
+}
+
+.plan-page__version {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.plan-page__days {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.plan-day-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: #fff;
+}
+
+.plan-day-card__weekday {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.plan-day-card__date {
+  margin: 0.15rem 0 1rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.plan-day-card__meals {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.plan-meal {
+  padding-top: 0.75rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.plan-meal:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.plan-meal__type {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+}
+
+.plan-meal__title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.plan-meal__label {
+  margin: 0.4rem 0 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #666;
+}
+
+.plan-meal__ingredients {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.plan-meal__nutrition {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.plan-day-card__totals,
+.plan-day-card__difference {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.plan-day-card__totals h3,
+.plan-day-card__difference h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.plan-day-card__totals p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.plan-day-card__difference-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.plan-day-card__difference-value--positive {
+  font-weight: 600;
+  color: #1a7a34;
+}
+
+.plan-day-card__difference-value--negative {
+  font-weight: 600;
+  color: #8a5a00;
+}
+
+.plan-day-card__difference-value--zero {
+  font-weight: 600;
+  color: #555;
+}

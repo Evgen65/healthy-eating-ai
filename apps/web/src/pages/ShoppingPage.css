@@ -1,0 +1,116 @@
+.shopping-page__date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 220px;
+  margin-top: 1rem;
+}
+
+.shopping-page__date-field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.shopping-page__date-field input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.shopping-page__date-field input:focus {
+  outline: 2px solid #1a7a34;
+  outline-offset: 1px;
+}
+
+.shopping-page__message {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.shopping-page__message--error {
+  color: #b3261e;
+}
+
+.shopping-page__action {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #1a7a34;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.shopping-page__week-range {
+  margin-top: 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.shopping-page__total-items {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.shopping-page__notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f7f7f5;
+  color: #555;
+  font-size: 0.9rem;
+  max-width: 640px;
+}
+
+.shopping-page__link {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.shopping-page__version {
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.shopping-page__items {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.shopping-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: #fff;
+}
+
+.shopping-item__name {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.shopping-item__quantity {
+  font-size: 0.9rem;
+  color: #333;
+  white-space: nowrap;
+}

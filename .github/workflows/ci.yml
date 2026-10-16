@@ -1,0 +1,279 @@
+# Healthy Eating AI - continuous integration (M22).
+# CI only: no deployment, no image publication, no secrets, no real OpenAI key.
+# Every command below maps 1:1 to a local npm script - see docs/ci.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Manual run; additionally starts the (slow, optional) Android job `mobile-android`.
+  workflow_dispatch:
+
+# A newer commit on the same PR/branch cancels the obsolete run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # 22 matches the Docker image (node:22-alpine); the project requires >=20.
+  NODE_VERSION: "22"
+  # The Postgres service containers below are disposable (destroyed with the job);
+  # their CI-only credentials protect nothing. Real secrets are never put in this file.
+  # Safe HTTPS-looking placeholder; no real endpoint is ever contacted.
+  CI_VITE_API_BASE_URL: https://api.example.test
+
+jobs:
+  static-and-web:
+    name: Typecheck, Web tests, production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm # caches the npm download cache only, never node_modules
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run typecheck:mobile
+      - run: npx playwright install --with-deps chromium
+      - name: Web tests
+        run: npm run test:web
+      - name: Production build (shared + API + Web)
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ env.CI_VITE_API_BASE_URL }}
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-and-web-reports
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  api-and-e2e:
+    name: Migrations, API tests, Web E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_user # superuser of the throwaway cluster -> may CREATE EXTENSION pgcrypto
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: healthy_eating_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d healthy_eating_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/healthy_eating_ci
+      JWT_SECRET: ci-only-fake-jwt-secret-not-used-anywhere-else-0123456789
+      WEB_ORIGIN: http://localhost:5173
+      AI_PROVIDER: mock # no OPENAI_API_KEY is defined anywhere in this workflow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Migrate the empty database
+        run: npm run db:migrate
+      - name: Migration status (nothing may be pending)
+        run: npm run db:status
+      - run: npx playwright install --with-deps chromium
+      - name: API tests
+        run: npm run test:api
+      - name: Web E2E
+        run: npm run test:e2e
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-and-e2e-reports
+          path: |
+            playwright-report-api/
+            playwright-report-e2e/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  smoke-prod:
+    name: Production smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: healthy_eating_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d healthy_eating_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/healthy_eating_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ env.CI_VITE_API_BASE_URL }}
+      - run: npm run db:migrate
+      # The script passes its own production-like env (mock AI, random JWT secret,
+      # no root .env) to the compiled API and `vite preview`, and stops both
+      # child processes in its finally block.
+      - name: Smoke
+        run: npm run smoke:prod
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: healthy_eating_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d healthy_eating_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (not pushed anywhere)
+        run: docker build -t healthy-eating-api:ci .
+      - name: Run container and check health
+        run: |
+          JWT_SECRET="$(openssl rand -hex 32)"
+          echo "::add-mask::$JWT_SECRET"
+          # Host networking lets the container reach the service container's published port.
+          docker run -d --name api --network host \
+            -e PORT=4000 \
+            -e DATABASE_URL="postgresql://ci_user:ci_password@localhost:5432/healthy_eating_ci" \
+            -e JWT_SECRET="$JWT_SECRET" \
+            -e WEB_ORIGIN=https://web.example.test \
+            -e AI_PROVIDER=mock \
+            healthy-eating-api:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4000/health && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4000/health
+          curl -fsS http://127.0.0.1:4000/health/db
+      - name: Graceful stop (SIGTERM -> exit 0)
+        run: |
+          docker stop -t 15 api
+          code="$(docker inspect -f '{{.State.ExitCode}}' api)"
+          echo "exit code: $code"
+          test "$code" = "0"
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs api || true
+
+  # Optional, manual-only (workflow_dispatch). NOT a required check and not run on
+  # push/PR: an emulator run takes ~15+ min and is more fragile than the core jobs.
+  # It reuses the existing scripts (mobile:api, mobile:metro, mobile:appium,
+  # test:mobile:doctor, test:mobile); there is no second automation architecture.
+  # Emulator: API 30, x86_64, google_apis, Pixel 5 profile (local AVD "Nex5" is API 26) -
+  # app behaviour is identical, Expo Go 57 simply needs a newer, KVM-friendly image.
+  # NOT yet verified on a hosted runner.
+  mobile-android:
+    name: Mobile Android (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: healthy_eating_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d healthy_eating_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/healthy_eating_ci
+      JWT_SECRET: ci-only-fake-jwt-secret-not-used-anywhere-else-0123456789
+      AI_PROVIDER: mock
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm ci
+      - run: npm run db:migrate
+      - name: Download Expo Go for SDK 57
+        run: |
+          curl -fsS https://api.expo.dev/v2/versions/latest -o versions.json
+          node -e "const v=require('./versions.json').data.sdkVersions;const k=Object.keys(v).find(x=>x.startsWith('57.'));if(!k)throw new Error('No SDK 57 entry');console.log('Expo Go for SDK',k);require('child_process').execFileSync('curl',['-fsSL','-o','expo-go.apk',v[k].androidClientUrl],{stdio:'inherit'})"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run Mobile suite on the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          profile: pixel_5
+          disable-animations: true
+          script: |
+            adb install -r -g expo-go.apk
+            nohup npm run mobile:api > api.log 2>&1 &
+            nohup npm run mobile:metro > metro.log 2>&1 &
+            nohup npm run mobile:appium > appium.log 2>&1 &
+            for i in $(seq 1 90); do curl -fsS http://127.0.0.1:4000/health >/dev/null 2>&1 && curl -fsS http://127.0.0.1:8081/status >/dev/null 2>&1 && curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1 && break; sleep 2; done
+            npm run test:mobile:doctor
+            npm run test:mobile
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android-reports
+          path: |
+            mobile-test-results/
+            api.log
+            metro.log
+            appium.log
+          if-no-files-found: ignore
+          retention-days: 7

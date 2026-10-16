@@ -1,0 +1,16 @@
+# Keep secrets, dependencies, build output and tests out of the build context.
+**/node_modules
+**/dist
+.env
+**/.env
+**/.env.*
+!.env.example
+.git
+test-results
+playwright-report*
+mobile-test-results
+tests
+apps/mobile/*
+!apps/mobile/package.json
+docs
+*.log

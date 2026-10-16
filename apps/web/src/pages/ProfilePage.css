@@ -1,0 +1,80 @@
+.profile-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem 1.5rem;
+  margin-top: 1.5rem;
+  max-width: 720px;
+}
+
+.profile-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profile-form__field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.profile-form__field input,
+.profile-form__field select {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.profile-form__field input:focus,
+.profile-form__field select:focus {
+  outline: 2px solid #1a7a34;
+  outline-offset: 1px;
+}
+
+.profile-form__error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b3261e;
+}
+
+.profile-form button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #1a7a34;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-form button:disabled {
+  background: #9bbfa6;
+  cursor: not-allowed;
+}
+
+.profile-page__message {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.profile-page__message--success {
+  color: #1a7a34;
+}
+
+.profile-page__message--error {
+  color: #b3261e;
+}
+
+@media (max-width: 720px) {
+  .profile-form {
+    grid-template-columns: 1fr;
+  }
+}

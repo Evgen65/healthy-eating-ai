@@ -1,0 +1,42 @@
+{
+  "name": "@healthy-eating-ai/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --conditions=healthy-eating-runtime dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate:create": "node-pg-migrate create --migration-file-language sql",
+    "migrate:up": "node-pg-migrate up --envPath ../../.env",
+    "migrate:down": "node-pg-migrate down --envPath ../../.env",
+    "migrate:status": "node-pg-migrate up --dry-run --envPath ../../.env"
+  },
+  "dependencies": {
+    "@healthy-eating-ai/shared": "*",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.3.0",
+    "node-pg-migrate": "^9.0.0",
+    "openai": "^7.18.0",
+    "pg": "^8.23.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^22.9.0",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

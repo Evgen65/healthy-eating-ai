@@ -1,0 +1,34 @@
+.nutrition-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.dashboard-action {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #1a7a34;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dashboard-action:disabled {
+  background: #9bbfa6;
+  cursor: not-allowed;
+}
+
+.dashboard-message {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.dashboard-message--error {
+  color: #b3261e;
+}

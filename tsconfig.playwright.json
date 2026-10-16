@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "@playwright/test"
+    ],
+    "noEmit": true
+  },
+  "include": [
+    "playwright.config.ts",
+    "playwright.api.config.ts",
+    "playwright.e2e.config.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "tests/mobile/**"
+  ]
+}

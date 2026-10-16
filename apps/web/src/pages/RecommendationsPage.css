@@ -1,0 +1,89 @@
+.recommendations-page__message {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.recommendations-page__message--error {
+  color: #b3261e;
+}
+
+.recommendations-page__action {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #1a7a34;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.recommendations-page__section-heading {
+  margin-top: 2rem;
+}
+
+.recommendations-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 640px;
+}
+
+.recommendations-list__item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e0e0e0;
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.recommendations-list__item--info {
+  border-left-color: #1a7a34;
+}
+
+.recommendations-list__item--warning {
+  border-left-color: #b3261e;
+}
+
+.recommendations-list__level {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.recommendations-list__item--info .recommendations-list__level {
+  color: #1a7a34;
+  background: #e6f4ea;
+}
+
+.recommendations-list__item--warning .recommendations-list__level {
+  color: #b3261e;
+  background: #fbe9e7;
+}
+
+.recommendations-list__message {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+@media (max-width: 720px) {
+  .recommendations-list__item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+}

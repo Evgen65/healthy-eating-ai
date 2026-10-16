@@ -1,0 +1,4 @@
+[
+  { "pattern": "Mobile-Qa-[0-9a-fA-F-]{36}", "flags": "g", "replacer": "**PASSWORD**" },
+  { "pattern": "eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "flags": "g", "replacer": "**JWT**" }
+]

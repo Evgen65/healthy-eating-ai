@@ -1,0 +1,101 @@
+.history-page__date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 220px;
+  margin-top: 1rem;
+}
+
+.history-page__date-field label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.history-page__date-field input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.history-page__date-field input:focus {
+  outline: 2px solid #1a7a34;
+  outline-offset: 1px;
+}
+
+.history-page__message {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.history-page__message--error {
+  color: #b3261e;
+}
+
+.history-page__action {
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: #1a7a34;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.history-page__section-heading {
+  margin-top: 2rem;
+}
+
+.history-meals-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 640px;
+}
+
+.history-meals-list__item {
+  padding: 1rem 1.25rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.history-meals-list__time {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.history-meals-list__type {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+
+.history-meals-list__calories {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.history-meals-list__macros {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+@media (max-width: 720px) {
+  .history-page__date-field {
+    max-width: 100%;
+  }
+}

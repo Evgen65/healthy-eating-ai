@@ -1,0 +1,38 @@
+{
+  "name": "@healthy-eating-ai/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "cross-env NODE_PATH=./node_modules expo start",
+    "dev": "cross-env NODE_PATH=./node_modules expo start",
+    "start:emulator": "cross-env NODE_PATH=./node_modules EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:4000 expo start --clear --port 8081",
+    "android": "cross-env NODE_PATH=./node_modules expo start --android",
+    "ios": "cross-env NODE_PATH=./node_modules expo start --ios",
+    "web": "cross-env NODE_PATH=./node_modules expo start --web",
+    "tsc:check": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~57.0.16",
+    "@healthy-eating-ai/shared": "*",
+    "expo": "~57.0.25",
+    "expo-constants": "~57.0.19",
+    "expo-file-system": "~57.0.7",
+    "expo-image-picker": "~57.0.20",
+    "expo-linking": "~57.0.11",
+    "expo-router": "~57.0.23",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "cross-env": "^10.1.0",
+    "typescript": "~6.0.3"
+  }
+}
