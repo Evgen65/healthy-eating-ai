@@ -2,7 +2,8 @@
 //
 //   npm run build
 //   DATABASE_URL=postgresql://... npm run db:migrate     # empty DB -> usable
-//   DATABASE_URL=postgresql://... npm run smoke:prod
+//   DATABASE_URL=postgresql://... VITE_API_BASE_URL=https://api.example.test npm run smoke:prod
+//   (vite preview re-validates VITE_API_BASE_URL; it may also come from the root .env)
 //
 // Starts the COMPILED API (NODE_ENV=production, AI_PROVIDER=mock - no OpenAI
 // credits are spent) and the built Web bundle via `vite preview`, then walks

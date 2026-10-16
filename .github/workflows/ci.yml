@@ -129,6 +129,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/healthy_eating_ci
+      # Needed by BOTH the production build and `vite preview` (vite.config.ts
+      # validates it in production mode); the smoke script's preview child inherits it.
+      VITE_API_BASE_URL: https://api.example.test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -138,8 +141,6 @@ jobs:
       - run: npm ci
       - name: Build
         run: npm run build
-        env:
-          VITE_API_BASE_URL: ${{ env.CI_VITE_API_BASE_URL }}
       - run: npm run db:migrate
       # The script passes its own production-like env (mock AI, random JWT secret,
       # no root .env) to the compiled API and `vite preview`, and stops both
