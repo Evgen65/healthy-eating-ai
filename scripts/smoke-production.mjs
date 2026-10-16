@@ -17,7 +17,13 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const API_PORT = process.env.SMOKE_API_PORT ?? "4100";
 const WEB_PORT = process.env.SMOKE_WEB_PORT ?? "4173";
-const API = `http://localhost:${API_PORT}`;
+// Loopback is explicit everywhere we CONNECT: "localhost" may resolve to ::1
+// first on Linux runners while a server listens on 127.0.0.1 only (or vice
+// versa), so the preview is bound to, and polled at, 127.0.0.1.
+const HOST = "127.0.0.1";
+const API = `http://${HOST}:${API_PORT}`;
+const WEB_URL = `http://${HOST}:${WEB_PORT}`;
+// The browser-visible origin string the API is configured to allow (CORS).
 const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
 
 if (!process.env.DATABASE_URL) {
@@ -31,8 +37,11 @@ function check(name, ok, detail = "") {
   if (!ok) failures++;
 }
 
-async function waitFor(url, label) {
+async function waitFor(url, label, proc) {
   for (let i = 0; i < 60; i++) {
+    if (proc.exitCode !== null) {
+      throw new Error(`${label} process exited early (code ${proc.exitCode}) before becoming ready at ${url}`);
+    }
     try {
       if ((await fetch(url)).ok) return;
     } catch {
@@ -60,10 +69,12 @@ const api = spawn(process.execPath, ["--conditions=healthy-eating-runtime", "app
 api.stdout.on("data", (d) => apiLog.push(String(d)));
 api.stderr.on("data", (d) => apiLog.push(String(d)));
 
-const web = spawn(process.execPath, [resolve(root, "node_modules/vite/bin/vite.js"), "preview", "--port", WEB_PORT, "--strictPort"], {
+const webLog = [];
+const web = spawn(process.execPath, [resolve(root, "node_modules/vite/bin/vite.js"), "preview", "--host", HOST, "--port", WEB_PORT, "--strictPort"], {
   cwd: resolve(root, "apps/web"),
-  stdio: "ignore",
 });
+web.stdout.on("data", (d) => webLog.push(String(d)));
+web.stderr.on("data", (d) => webLog.push(String(d)));
 
 async function json(path, { method = "GET", body, token, cookie, headers = {} } = {}) {
   const res = await fetch(`${API}${path}`, {
@@ -81,15 +92,15 @@ async function json(path, { method = "GET", body, token, cookie, headers = {} } 
 }
 
 try {
-  await waitFor(`${API}/health`, "API");
-  await waitFor(WEB_ORIGIN, "Web preview");
+  await waitFor(`${API}/health`, "API", api);
+  await waitFor(WEB_URL, "Web preview", web);
 
   const health = await json("/health");
   check("GET /health", health.res.status === 200 && health.data.status === "ok");
   const db = await json("/health/db");
   check("GET /health/db (database reachable)", db.res.status === 200 && db.data.status === "ok");
 
-  const web1 = await fetch(WEB_ORIGIN);
+  const web1 = await fetch(WEB_URL);
   check("Web production build served", web1.status === 200 && (await web1.text()).includes('<div id="root">'));
 
   const preflight = await fetch(`${API}/api/auth/login`, {
@@ -152,6 +163,7 @@ try {
 } catch (error) {
   failures++;
   console.error("FAIL  smoke aborted:", error instanceof Error ? error.message : error);
+  console.error("--- Web preview output ---\n" + webLog.join(""));
   console.error("--- API output ---\n" + apiLog.join(""));
 } finally {
   web.kill();
