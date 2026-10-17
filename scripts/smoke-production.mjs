@@ -161,6 +161,34 @@ try {
 
   const logText = apiLog.join("");
   check("API logs contain no token / password / DATABASE_URL", !logText.includes(token) && !logText.includes(password) && !logText.includes(process.env.DATABASE_URL));
+  check("API logs contain no session cookie value", !logText.includes(cookie.split("=")[1]));
+
+  // Structured logging (M23A): JSON lines; X-Request-Id correlates with the completion log.
+  const parseLog = () =>
+    apiLog
+      .join("")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null;
+        }
+      });
+  const logEvents = parseLog();
+  check("Every API log line is structured JSON", logEvents.length > 0 && logEvents.every((e) => e !== null && typeof e.level === "string"));
+  const correlated = await json("/api/auth/me", { cookie });
+  const requestId = correlated.res.headers.get("x-request-id");
+  check("Responses carry X-Request-Id", /^[0-9a-f-]{36}$/.test(requestId ?? ""));
+  await new Promise((r) => setTimeout(r, 300));
+  const completed = parseLog().find((e) => e?.event === "http_request_completed" && e.requestId === requestId);
+  check("Request completion is logged with the same requestId, status and duration",
+    completed?.status === 200 && completed.path === "/api/auth/me" && typeof completed.durationMs === "number");
+  check("AI analysis start/success are logged", ["ai_analysis_started", "ai_analysis_succeeded"].every((ev) => parseLog().some((e) => e?.event === ev)));
+  const finalLog = apiLog.join("");
+  check("Final API log still contains no token / password / cookie / DATABASE_URL",
+    ![token, password, cookie.split("=")[1], process.env.DATABASE_URL].some((secret) => finalLog.includes(secret)));
 } catch (error) {
   failures++;
   console.error("FAIL  smoke aborted:", error instanceof Error ? error.message : error);

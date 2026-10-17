@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { logger } from "../logging/logger.js";
 
 // Startup validation (validateEnv.ts, called from index.ts before this
 // module is ever imported) guarantees a real JWT_SECRET in production. The
@@ -15,7 +16,10 @@ function resolveJwtSecret(): string {
   if (process.env.NODE_ENV?.trim() === "production") {
     throw new Error("JWT_SECRET is required in production.");
   }
-  console.warn("[auth] JWT_SECRET is not set - using a random per-process secret (sessions will not survive a restart).");
+  logger.warn(
+    { event: "jwt_secret_ephemeral" },
+    "JWT_SECRET is not set - using a random per-process secret (sessions will not survive a restart).",
+  );
   return randomBytes(32).toString("hex");
 }
 

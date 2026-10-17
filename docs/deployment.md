@@ -94,9 +94,27 @@ Production assumes HTTPS, terminated by the hosting platform / reverse proxy —
 
 OpenAI outages never affect either endpoint; they surface only as controlled errors from `/api/ai/meal-analysis`.
 
-## Shutdown & logging
+## Shutdown
 
-`SIGTERM`/`SIGINT`: stop accepting connections, finish in-flight requests, close the DB pool, exit 0 (forced exit after 10 s). Logs are plain stdout/stderr: startup line, `[config]`, `[health]`, `[ai]` (categorized provider outcomes, no keys/images) and `[shutdown]`. Authorization headers, tokens, passwords and image data are never logged.
+`SIGTERM`/`SIGINT`: stop accepting connections, finish in-flight requests, close the DB pool, exit 0 (forced exit after 10 s). Each step is logged as a `shutdown_*` event.
+
+## Logging
+
+**Format.** One JSON object per line on stdout (Pino), in every environment. Common fields: `level` (`fatal`/`error`/`warn`/`info`/`debug`), `time` (ISO 8601), `service`, `event` (stable snake_case name) and, inside a request, `requestId`. Set `LOG_LEVEL` (default `info`; `silent` disables output). There is no pretty-printer; pipe through `jq` locally if you want readable output.
+
+**Levels.** `info` successful requests and lifecycle; `warn` 4xx responses, AI retries, config warnings; `error` 5xx, unhandled errors, AI failures, DB failures; `debug` successful `/health*` probe requests and per-call OpenAI detail.
+
+**Request ID.** Every request gets a server-generated UUID (any client-supplied `X-Request-Id` is ignored), returned in the `X-Request-Id` response header (also CORS-exposed to the Web app) and attached to every log line written for that request. It is a correlation label only - never authentication or authorization data.
+
+**Events.** `http_request_completed` (`method`, `path` = matched route pattern such as `/api/me/meals/:id`, or `unmatched`; `status`, `durationMs`), `unhandled_error`, `invalid_request_body`, `http_request_aborted`, `ai_analysis_started` / `ai_analysis_retry` / `ai_analysis_succeeded` / `ai_analysis_failed` (`provider`, `category`, `attempt(s)`, `durationMs`, provider status/code), `db_health_check_failed`, `db_pool_error`, `server_started`, `config_warning`, `config_invalid`, `shutdown_*`. SQL queries are not logged.
+
+```json
+{"level":"info","time":"2026-01-01T12:00:00.000Z","service":"healthy-eating-api","requestId":"0b0e…","event":"http_request_completed","method":"POST","path":"/api/me/meals","status":201,"durationMs":42.17}
+```
+
+**Never logged.** Request/response bodies, full headers, `Authorization`, cookies, passwords, JWTs, image data/base64, raw OpenAI responses, query parameters, `OPENAI_API_KEY`, `JWT_SECRET`, `DATABASE_URL`. Enforced by not passing them, by Pino redaction of those field names, and by a final scrub of the configured secret values from every output line.
+
+**Correlation.** When a user reports a problem, take the `X-Request-Id` from the response (or the failing client call) and filter logs on that `requestId`: you get the completion line, any `unhandled_error` or `ai_analysis_*` events, in one query (`grep <id>` / `jq` / your log platform). Provider-side ids appear as `providerRequestId`.
 
 ## Production-like smoke (no OpenAI credits)
 
@@ -106,7 +124,7 @@ DATABASE_URL=postgresql://…/scratch_db npm run db:migrate
 DATABASE_URL=postgresql://…/scratch_db npm run smoke:prod
 ```
 
-Starts the compiled API (`NODE_ENV=production`, `AI_PROVIDER=mock`) and `vite preview`, then checks health, CORS, register/login (cookie + Bearer), profile, target, meal, dashboard and mock AI. Use a scratch database — it creates a user.
+Starts the compiled API (`NODE_ENV=production`, `AI_PROVIDER=mock`) and `vite preview`, then checks health, structured logs / `X-Request-Id`, CORS, register/login (cookie + Bearer), profile, target, meal, dashboard and mock AI. Use a scratch database — it creates a user.
 
 ## Known limitations
 

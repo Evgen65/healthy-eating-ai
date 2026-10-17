@@ -1,5 +1,6 @@
 import type { Server } from "node:http";
 import type { Pool } from "pg";
+import { logger } from "./logging/logger.js";
 
 const FORCE_EXIT_AFTER_MS = 10_000;
 
@@ -14,14 +15,14 @@ export function registerGracefulShutdown(server: Server, pool: Pool): void {
 
   const shutdown = (signal: string) => {
     if (shuttingDown) {
-      console.log(`[shutdown] ${signal} received again - exiting immediately.`);
+      logger.warn({ event: "shutdown_repeated_signal", signal }, "signal received again - exiting immediately");
       process.exit(1);
     }
     shuttingDown = true;
-    console.log(`[shutdown] ${signal} received - closing HTTP server and database pool.`);
+    logger.info({ event: "shutdown_started", signal }, "closing HTTP server and database pool");
 
     const forceTimer = setTimeout(() => {
-      console.error(`[shutdown] did not finish within ${FORCE_EXIT_AFTER_MS}ms - forcing exit.`);
+      logger.error({ event: "shutdown_forced", timeoutMs: FORCE_EXIT_AFTER_MS }, "shutdown did not finish in time - forcing exit");
       process.exit(1);
     }, FORCE_EXIT_AFTER_MS);
     forceTimer.unref();
@@ -30,14 +31,14 @@ export function registerGracefulShutdown(server: Server, pool: Pool): void {
       try {
         await pool.end();
       } catch (poolError) {
-        console.error("[shutdown] error while closing the database pool:", poolError instanceof Error ? poolError.message : "unknown error");
+        logger.error({ event: "shutdown_error", component: "database_pool", err: poolError }, "error while closing the database pool");
         process.exit(1);
       }
       if (serverError) {
-        console.error("[shutdown] error while closing the HTTP server:", serverError.message);
+        logger.error({ event: "shutdown_error", component: "http_server", err: serverError }, "error while closing the HTTP server");
         process.exit(1);
       }
-      console.log("[shutdown] clean exit.");
+      logger.info({ event: "shutdown_completed" }, "clean exit");
       process.exit(0);
     });
     // Idle keep-alive connections would otherwise hold server.close() open.

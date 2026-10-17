@@ -1,6 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import multer from "multer";
 import { requireAuth } from "../auth/authMiddleware.js";
+import { env } from "../config/env.js";
+import { runWithLogger } from "../logging/requestContext.js";
+import { logAiAnalysisFailed } from "../ai/aiAnalysisLogging.js";
 import type { MealAnalyzer } from "../ai/mealAnalyzer.js";
 import { createMealAnalyzer } from "../ai/mealAnalyzerFactory.js";
 import { analyzeWithRetry } from "../ai/retryingMealAnalyzer.js";
@@ -78,13 +81,28 @@ mealAnalysisRouter.post("/api/ai/meal-analysis", requireAuth, (req: Request, res
       return;
     }
 
+    const log = req.log;
+    const startedAt = Date.now();
+    log.info({ event: "ai_analysis_started", provider: env.aiProvider, mimeType: file.mimetype, sizeBytes: file.size });
+
     try {
-      const { result, attempts } = await analyzeWithRetry(mealAnalyzer, {
-        buffer: file.buffer,
-        mimeType: file.mimetype,
-        originalName: file.originalname,
-      });
+      // Multer's stream callbacks may not carry the async context, so the
+      // request logger is re-established explicitly for the provider layer.
+      const { result, attempts } = await runWithLogger(log, () =>
+        analyzeWithRetry(mealAnalyzer, {
+          buffer: file.buffer,
+          mimeType: file.mimetype,
+          originalName: file.originalname,
+        }),
+      );
       res.set(ATTEMPTS_HEADER, String(attempts));
+      log.info({
+        event: "ai_analysis_succeeded",
+        provider: env.aiProvider,
+        attempts,
+        itemCount: result.items.length,
+        durationMs: Date.now() - startedAt,
+      });
 
       // Normalized provider behavior for "no food identifiable": zero
       // items (see openAiMealAnalyzer.ts / mockMealAnalyzer.ts). Converted
@@ -101,23 +119,22 @@ mealAnalysisRouter.post("/api/ai/meal-analysis", requireAuth, (req: Request, res
         res.set(ATTEMPTS_HEADER, String(analyzeError.attempts));
       }
 
+      logAiAnalysisFailed(log, analyzeError, { provider: env.aiProvider, durationMs: Date.now() - startedAt });
+
       // Reliability principle: external AI failure must never crash
       // Express and must never expose raw provider details to the browser
-      // - every branch below logs the classification/metadata server-side
-      // (see mealAnalyzerErrors.ts) and responds with only a short,
+      // - the classification/metadata is logged server-side above
+      // (ai_analysis_failed, see aiAnalysisLogging.ts) and every branch below responds with only a short,
       // provider-neutral, non-sensitive public message.
       if (analyzeError instanceof AiProviderNotConfiguredError) {
-        console.error("[ai] provider not configured:", analyzeError.message, analyzeError.meta);
         res.status(503).json({ error: "AI provider is not configured" });
         return;
       }
       if (analyzeError instanceof AiProviderTimeoutError) {
-        console.error("[ai] provider timed out:", analyzeError.message, analyzeError.meta);
         res.status(504).json({ error: "Meal analysis timed out" });
         return;
       }
       if (analyzeError instanceof AiProviderRateLimitError) {
-        console.error("[ai] provider rate limited:", analyzeError.message, analyzeError.meta);
         res.status(429).json({ error: "Meal analysis is temporarily rate limited" });
         return;
       }
@@ -125,26 +142,21 @@ mealAnalysisRouter.post("/api/ai/meal-analysis", requireAuth, (req: Request, res
         // Deliberately the same public message/status as
         // AiProviderUnavailableError/AiProviderNetworkError below - billing
         // and credit-balance details never reach the browser, only logs.
-        console.error("[ai] provider quota/credits exhausted:", analyzeError.message, analyzeError.meta);
         res.status(503).json({ error: "Meal analysis service is temporarily unavailable" });
         return;
       }
       if (analyzeError instanceof AiProviderInvalidResponseError) {
-        console.error("[ai] provider returned an invalid response:", analyzeError.message, analyzeError.meta);
         res.status(502).json({ error: "Meal analysis provider returned an invalid response" });
         return;
       }
       if (analyzeError instanceof AiProviderUnavailableError || analyzeError instanceof AiProviderNetworkError) {
-        console.error("[ai] provider unavailable:", analyzeError.message, analyzeError.meta);
         res.status(502).json({ error: "Meal analysis service is temporarily unavailable" });
         return;
       }
       if (analyzeError instanceof AiProviderRequestError) {
-        console.error("[ai] provider request failed:", analyzeError.message, analyzeError.meta);
         res.status(502).json({ error: "Meal analysis provider failed" });
         return;
       }
-      console.error(analyzeError);
       res.status(500).json({ error: "Meal analysis failed" });
     }
   });

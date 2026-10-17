@@ -25,6 +25,7 @@
     "node-pg-migrate": "^9.0.0",
     "openai": "^7.18.0",
     "pg": "^8.23.0",
+    "pino": "^10.4.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -1,7 +1,9 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import express, { type NextFunction, type Request, type Response } from "express";
+import express, { type Request, type Response } from "express";
 import { env } from "./config/env.js";
+import { errorHandler } from "./logging/errorHandler.js";
+import { REQUEST_ID_HEADER, createRequestLogging } from "./logging/requestLogging.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { healthRouter } from "./routes/health.js";
 import { historyRouter } from "./routes/historyRoutes.js";
@@ -24,7 +26,8 @@ app.disable("x-powered-by");
 // credentialed (cookie-carrying) session, which the Fetch spec forbids
 // combining with a wildcard `*` origin - `credentials: true` here requires
 // echoing back one specific, configured origin instead (see env.webOrigin).
-app.use(cors({ origin: env.webOrigin, credentials: true }));
+app.use(createRequestLogging());
+app.use(cors({ origin: env.webOrigin, credentials: true, exposedHeaders: [REQUEST_ID_HEADER] }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -44,13 +47,4 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Not found" });
 });
 
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  // express.json() throws a SyntaxError for malformed request bodies -
-  // report it as a 400 rather than falling through to the generic 500.
-  if (err instanceof SyntaxError && "type" in err && err.type === "entity.parse.failed") {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
-  console.error(err);
-  res.status(500).json({ error: "Internal server error" });
-});
+app.use(errorHandler);

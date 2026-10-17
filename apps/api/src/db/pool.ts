@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { env } from "../config/env.js";
+import { logger } from "../logging/logger.js";
 
 export const pool = new Pool({
   connectionString: env.databaseUrl,
@@ -11,5 +12,5 @@ export const pool = new Pool({
 // An idle client emits 'error' on unexpected disconnects (e.g. the DB
 // restarting). Without a listener, that event would crash the process.
 pool.on("error", (err) => {
-  console.error("Unexpected error on idle database client:", err);
+  logger.error({ event: "db_pool_error", err }, "unexpected error on idle database client");
 });

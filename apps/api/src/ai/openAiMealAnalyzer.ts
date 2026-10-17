@@ -12,6 +12,7 @@ import type { MealAnalysisResult } from "@healthy-eating-ai/shared";
 import { calculateMealTotals } from "../calculators/mealTotalsCalculator.js";
 import { env } from "../config/env.js";
 import { aiMealAnalysisRequestSchema, aiMealAnalysisResultSchema, MAX_AI_ANALYSIS_ITEMS } from "./aiMealAnalysisSchema.js";
+import { getLogger } from "../logging/requestContext.js";
 import type { MealAnalyzer } from "./mealAnalyzer.js";
 import type { MealAnalysisInput } from "./mealAnalysisTypes.js";
 import {
@@ -332,12 +333,18 @@ interface AnalysisOutcome {
  * Never the API key, the uploaded image, or the raw model response/body.
  */
 function logOutcome(outcome: AnalysisOutcome): void {
-  console.log(
-    `[ai] provider=openai model=${outcome.model} durationMs=${outcome.durationMs} success=${outcome.success}` +
-      (outcome.itemCount === undefined ? "" : ` items=${outcome.itemCount}`) +
-      (outcome.classification === undefined ? "" : ` classification=${outcome.classification}`) +
-      (outcome.providerStatus === undefined ? "" : ` providerStatus=${outcome.providerStatus}`) +
-      (outcome.providerErrorCode === undefined ? "" : ` providerErrorCode=${outcome.providerErrorCode}`) +
-      (outcome.requestId === undefined ? "" : ` requestId=${outcome.requestId}`),
-  );
+  // Success is reported by the route as ai_analysis_succeeded; this adds the
+  // provider-side detail (model, item count, provider status / request id).
+  getLogger()[outcome.success ? "debug" : "info"]({
+    event: "ai_provider_call_completed",
+    provider: "openai",
+    model: outcome.model,
+    durationMs: outcome.durationMs,
+    success: outcome.success,
+    itemCount: outcome.itemCount,
+    classification: outcome.classification,
+    providerStatus: outcome.providerStatus,
+    providerErrorCode: outcome.providerErrorCode,
+    providerRequestId: outcome.requestId,
+  });
 }

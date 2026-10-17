@@ -1,6 +1,8 @@
 import type { MealAnalysisResult } from "@healthy-eating-ai/shared";
 import type { MealAnalyzer } from "./mealAnalyzer.js";
 import type { MealAnalysisInput } from "./mealAnalysisTypes.js";
+import { getLogger } from "../logging/requestContext.js";
+import { aiErrorCategory } from "./aiAnalysisLogging.js";
 import { MealAnalyzerError } from "./mealAnalyzerErrors.js";
 
 /**
@@ -57,9 +59,13 @@ export async function analyzeWithRetry(
         }
         throw error;
       }
-      console.log(
-        `[ai] attempt ${attempt}/${maxAttempts} failed with a retryable error (${error.constructor.name}), retrying`,
-      );
+      getLogger().warn({
+        event: "ai_analysis_retry",
+        attempt,
+        maxAttempts,
+        category: aiErrorCategory(error),
+        retryDelayMs: RETRY_DELAY_MS,
+      });
       await delay(RETRY_DELAY_MS);
     }
   }

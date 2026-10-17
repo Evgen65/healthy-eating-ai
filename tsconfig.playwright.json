@@ -11,7 +11,8 @@
     "playwright.config.ts",
     "playwright.api.config.ts",
     "playwright.e2e.config.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "apps/api/src/types/express.d.ts"
   ],
   "exclude": [
     "tests/mobile/**"
