@@ -4,6 +4,8 @@ import express, { type Request, type Response } from "express";
 import { env } from "./config/env.js";
 import { errorHandler } from "./logging/errorHandler.js";
 import { REQUEST_ID_HEADER, createRequestLogging } from "./logging/requestLogging.js";
+import { metrics, isMetricsEnabled } from "./metrics/index.js";
+import { createHttpMetrics, createMetricsRouter } from "./metrics/httpMetrics.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { healthRouter } from "./routes/health.js";
 import { historyRouter } from "./routes/historyRoutes.js";
@@ -27,11 +29,13 @@ app.disable("x-powered-by");
 // combining with a wildcard `*` origin - `credentials: true` here requires
 // echoing back one specific, configured origin instead (see env.webOrigin).
 app.use(createRequestLogging());
+app.use(createHttpMetrics(metrics));
 app.use(cors({ origin: env.webOrigin, credentials: true, exposedHeaders: [REQUEST_ID_HEADER] }));
 app.use(express.json());
 app.use(cookieParser());
 
 app.use(healthRouter);
+app.use(createMetricsRouter(metrics, () => isMetricsEnabled()));
 app.use(authRouter);
 app.use(profileRouter);
 app.use(nutritionTargetRouter);

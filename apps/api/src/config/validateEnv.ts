@@ -54,6 +54,13 @@ export function validateEnv(source: NodeJS.ProcessEnv): EnvValidationResult {
     warnings.push('AI_PROVIDER is "mock" in production mode - meal photo analysis returns canned results (fine for smoke tests only).');
   }
 
+  const metricsEnabled = read("METRICS_ENABLED").toLowerCase();
+  if (metricsEnabled && !["true", "false", "1", "0"].includes(metricsEnabled)) {
+    errors.push("METRICS_ENABLED must be true or false.");
+  } else if (isProduction && (metricsEnabled === "true" || metricsEnabled === "1")) {
+    warnings.push("METRICS_ENABLED is on: GET /metrics is unauthenticated - restrict it at the network level (reverse proxy / firewall).");
+  }
+
   const webOrigin = read("WEB_ORIGIN");
   if (isProduction && !webOrigin) {
     errors.push("WEB_ORIGIN is required in production (the single Web origin CORS will allow).");

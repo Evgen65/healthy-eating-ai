@@ -65,6 +65,7 @@ const api = spawn(process.execPath, ["--conditions=healthy-eating-runtime", "app
     JWT_SECRET: randomBytes(32).toString("hex"),
     WEB_ORIGIN,
     AI_PROVIDER: "mock",
+    METRICS_ENABLED: "true",
   },
 });
 api.stdout.on("data", (d) => apiLog.push(String(d)));
@@ -189,6 +190,18 @@ try {
   const finalLog = apiLog.join("");
   check("Final API log still contains no token / password / cookie / DATABASE_URL",
     ![token, password, cookie.split("=")[1], process.env.DATABASE_URL].some((secret) => finalLog.includes(secret)));
+  // Metrics (M23B): smoke enables METRICS_ENABLED explicitly.
+  const metricsRes = await fetch(`${API}/metrics`);
+  const metricsText = await metricsRes.text();
+  check("GET /metrics succeeds", metricsRes.status === 200, String(metricsRes.status));
+  check("/metrics has the Prometheus text Content-Type", (metricsRes.headers.get("content-type") ?? "").startsWith("text/plain") && (metricsRes.headers.get("content-type") ?? "").includes("version=0.0.4"));
+  check("HTTP metric exists", /http_requests_total\{method="GET",route="\/api\/auth\/me",status="200"\} [1-9]/.test(metricsText) && metricsText.includes("http_request_duration_seconds_bucket"));
+  check("AI metrics exist after mock analysis", /ai_analysis_requests_total\{provider="mock",outcome="success"\} [1-9]/.test(metricsText) && /ai_analysis_results_total\{result="meal_detected"\} [1-9]/.test(metricsText));
+  check("DB health metric exists", /db_health_checks_total\{outcome="ok"\} [1-9]/.test(metricsText));
+  check("Metrics output contains no token / password / cookie / DATABASE_URL / email",
+    ![token, password, cookie.split("=")[1], process.env.DATABASE_URL, email].some((secret) => metricsText.includes(secret)));
+  const seenRequestIds = parseLog().map((e) => e?.requestId).filter(Boolean);
+  check("Metrics output contains no request ids", seenRequestIds.length > 0 && !seenRequestIds.some((id) => metricsText.includes(id)));
 } catch (error) {
   failures++;
   console.error("FAIL  smoke aborted:", error instanceof Error ? error.message : error);

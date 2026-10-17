@@ -4,6 +4,8 @@ import { requireAuth } from "../auth/authMiddleware.js";
 import { env } from "../config/env.js";
 import { runWithLogger } from "../logging/requestContext.js";
 import { logAiAnalysisFailed } from "../ai/aiAnalysisLogging.js";
+import { recordAiAnalysisFailure, recordAiAnalysisSuccess, recordAiRetry } from "../ai/aiMetrics.js";
+import { metrics } from "../metrics/index.js";
 import type { MealAnalyzer } from "../ai/mealAnalyzer.js";
 import { createMealAnalyzer } from "../ai/mealAnalyzerFactory.js";
 import { analyzeWithRetry } from "../ai/retryingMealAnalyzer.js";
@@ -93,8 +95,9 @@ mealAnalysisRouter.post("/api/ai/meal-analysis", requireAuth, (req: Request, res
           buffer: file.buffer,
           mimeType: file.mimetype,
           originalName: file.originalname,
-        }),
+        }, undefined, (retryError) => recordAiRetry(metrics, env.aiProvider, retryError)),
       );
+      recordAiAnalysisSuccess(metrics, env.aiProvider, Date.now() - startedAt, result.items.length);
       res.set(ATTEMPTS_HEADER, String(attempts));
       log.info({
         event: "ai_analysis_succeeded",
@@ -119,6 +122,7 @@ mealAnalysisRouter.post("/api/ai/meal-analysis", requireAuth, (req: Request, res
         res.set(ATTEMPTS_HEADER, String(analyzeError.attempts));
       }
 
+      recordAiAnalysisFailure(metrics, env.aiProvider, Date.now() - startedAt, analyzeError);
       logAiAnalysisFailed(log, analyzeError, { provider: env.aiProvider, durationMs: Date.now() - startedAt });
 
       // Reliability principle: external AI failure must never crash

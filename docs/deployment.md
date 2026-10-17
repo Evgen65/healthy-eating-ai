@@ -29,6 +29,8 @@ In `production` mode the API **does not read any `.env` file** and **refuses to 
 | `AI_PROVIDER` | no (`mock`) | `mock` \| `openai`; anything else fails startup. Never falls back silently. |
 | `OPENAI_API_KEY` | if `openai` | server-side only |
 | `OPENAI_MODEL` | no | default in `apps/api/src/config/env.ts` |
+| `LOG_LEVEL` | no (`info`) | see Logging |
+| `METRICS_ENABLED` | no (`false`) | expose `GET /metrics`; see Metrics |
 
 **Web** (build-time, public only): `VITE_API_BASE_URL` — required for a production build (`https://` unless localhost). Only `VITE_*` values enter the bundle.
 
@@ -116,6 +118,30 @@ OpenAI outages never affect either endpoint; they surface only as controlled err
 
 **Correlation.** When a user reports a problem, take the `X-Request-Id` from the response (or the failing client call) and filter logs on that `requestId`: you get the completion line, any `unhandled_error` or `ai_analysis_*` events, in one query (`grep <id>` / `jq` / your log platform). Provider-side ids appear as `providerRequestId`.
 
+## Metrics
+
+Prometheus-compatible metrics, for "how often / how long" (logs remain the answer to "what happened"). No Prometheus server, Grafana or SaaS agent is part of this repository.
+
+**`METRICS_ENABLED`** (default `false`; accepts `true`/`false`/`1`/`0`, anything else fails startup). When off, `GET /metrics` is an ordinary `404 {"error":"Not found"}` and nothing is exposed; the metrics code still runs but is never required for product operation. When on, `GET /metrics` returns the Prometheus text exposition format (`Content-Type: text/plain; version=0.0.4; charset=utf-8`, as produced by `prom-client`) and the standard Node/process metrics (`process_*`, `nodejs_*`) are collected as well.
+
+**Production warning.** `/metrics` is unauthenticated (as Prometheus scrapers expect) and discloses traffic shape per route. Do not expose it to the internet: block it at the reverse proxy / load balancer / firewall and let only the scraper reach it. Enabling it in production logs a startup `config_warning` as a reminder.
+
+| Metric | Type | Labels |
+|---|---|---|
+| `http_requests_total` | counter | `method`, `route`, `status` |
+| `http_request_duration_seconds` | histogram | `method`, `route` |
+| `ai_analysis_requests_total` | counter | `provider`, `outcome` (`success` or the typed failure category) |
+| `ai_analysis_duration_seconds` | histogram | `provider` |
+| `ai_analysis_retries_total` | counter | `provider`, `category` |
+| `ai_analysis_results_total` | counter | `result` (`meal_detected` \| `no_food`) |
+| `db_health_checks_total` | counter | `outcome` (`ok` \| `error`) |
+| `db_health_check_duration_seconds` | histogram | – |
+| `process_*`, `nodejs_*` | standard | – |
+
+**Provider outcome vs business result.** `ai_analysis_requests_total` is about the provider call: `success`, or a failure category (`not_configured`, `timeout`, `rate_limited`, `quota_exhausted`, `invalid_response`, `unavailable`, `network_error`, `request_failed`, `unknown` - the same typed classification the logs use). `ai_analysis_results_total` is about what a *successful* call found: `no_food` is a successful provider execution with a business result of "nothing to log", never a failure.
+
+**Label and cardinality rules.** `route` is the matched route template (`/api/me/meals/:id`) or `unmatched` - never a raw URL, query string or id. `method` is one of the standard verbs or `OTHER`; `status` is the numeric code; `provider` is `mock`, `openai` or `other`. Labels are never derived from request ids, user ids, emails, IPs, filenames, headers, tokens or error messages, and the set of values is fixed in code. Every metric is declared once, in `apps/api/src/metrics/metrics.ts`. SQL queries are not instrumented.
+
 ## Production-like smoke (no OpenAI credits)
 
 ```bash
@@ -124,7 +150,7 @@ DATABASE_URL=postgresql://…/scratch_db npm run db:migrate
 DATABASE_URL=postgresql://…/scratch_db npm run smoke:prod
 ```
 
-Starts the compiled API (`NODE_ENV=production`, `AI_PROVIDER=mock`) and `vite preview`, then checks health, structured logs / `X-Request-Id`, CORS, register/login (cookie + Bearer), profile, target, meal, dashboard and mock AI. Use a scratch database — it creates a user.
+Starts the compiled API (`NODE_ENV=production`, `AI_PROVIDER=mock`) and `vite preview`, then checks health, structured logs / `X-Request-Id`, `/metrics` (enabled for the smoke only), CORS, register/login (cookie + Bearer), profile, target, meal, dashboard and mock AI. Use a scratch database — it creates a user.
 
 ## Known limitations
 

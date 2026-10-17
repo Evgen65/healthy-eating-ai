@@ -46,6 +46,7 @@ export async function analyzeWithRetry(
   analyzer: MealAnalyzer,
   input: MealAnalysisInput,
   maxAttempts: number = MAX_ANALYSIS_ATTEMPTS,
+  onRetry?: (error: MealAnalyzerError) => void,
 ): Promise<AnalyzeWithRetryResult> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -66,6 +67,7 @@ export async function analyzeWithRetry(
         category: aiErrorCategory(error),
         retryDelayMs: RETRY_DELAY_MS,
       });
+      onRetry?.(error);
       await delay(RETRY_DELAY_MS);
     }
   }

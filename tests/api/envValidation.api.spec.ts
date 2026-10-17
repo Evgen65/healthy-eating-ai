@@ -41,6 +41,12 @@ test.describe("API startup environment validation", () => {
     expect(validateEnv({ PORT: "99999" }).errors.join(" ")).toContain("PORT");
   });
 
+  test("METRICS_ENABLED must be a boolean and warns when exposed in production", () => {
+    expect(validateEnv({ METRICS_ENABLED: "maybe" }).errors.join(" ")).toContain("METRICS_ENABLED");
+    expect(validateEnv({ ...validProduction, METRICS_ENABLED: "true" }).warnings.join(" ")).toContain("METRICS_ENABLED");
+    expect(validateEnv({ ...validProduction, METRICS_ENABLED: "false" }).warnings.join(" ")).not.toContain("METRICS_ENABLED");
+  });
+
   test("error messages never contain secret values", () => {
     const secrets = { ...validProduction, JWT_SECRET: "tiny-secret-value", DATABASE_URL: "mysql://u:hunter2@h/db" };
     const text = validateEnv(secrets).errors.join(" ");
